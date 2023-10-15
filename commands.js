@@ -49,26 +49,40 @@ async function reviewCode() {
 
   const openai = await getOpenAI();
 
-  const completion = await openai.chat.completions.create({
-    messages: [
+  vscode.window
+    .showInformationMessage("🧑‍💻 Reviewing Code. Please wait...")
+    .withProgress(
       {
-        role: "user",
-        content: `Act as a developer code reviewer. You will help me identify potential bugs in the following code, give important suggestions on improving the code quality and maintainability, and check if it adheres to coding standards and best practices:
-    ${getSelectedText()}
-  `,
+        location: vscode.ProgressLocation.Window,
+        cancellable: false,
+        title: "Reviewing code...",
       },
-    ],
-    model: "gpt-3.5-turbo",
-  });
-  const message = get(completion, "choices.0.message.content");
+      async (progress) => {
+        progress.report({ increment: 0 });
 
-  const panel = vscode.window.createWebviewPanel(
-    "codeAnalysis",
-    "Code Analysis",
-    vscode.ViewColumn.One
-  );
+        const completion = await openai.chat.completions.create({
+          messages: [
+            {
+              role: "user",
+              content: `Act as a developer code reviewer. You will help me identify potential bugs in the following code, give important suggestions on improving the code quality and maintainability, and check if it adheres to coding standards and best practices:
+  ${getSelectedText()}`,
+            },
+          ],
+          model: "gpt-3.5-turbo",
+        });
+        const message = get(completion, "choices.0.message.content");
 
-  panel.webview.html = `<h1>Code Refiner: Review Code</h1><pre>${message}</pre>`;
+        const panel = vscode.window.createWebviewPanel(
+          "codeAnalysis",
+          "Code Analysis",
+          vscode.ViewColumn.One
+        );
+
+        panel.webview.html = `<h1>Code Refiner: Review Code</h1><pre>${message}</pre>`;
+
+        progress.report({ increment: 100 });
+      }
+    );
 }
 
 function getSelectedText() {
